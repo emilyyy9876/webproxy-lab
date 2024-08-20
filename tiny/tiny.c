@@ -50,3 +50,56 @@ int main(int argc, char **argv)
     Close(connfd);
   }
 }
+
+void doit(int fd)
+{
+  // 1. 변수 선언
+  int is_static;
+  // sbuf: 파일의 상태정보를 가지고 있음
+  struct stat sbuf;
+  char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
+  char filename[MAXLINE], cgiargs[MAXLINE];
+  rio_t rio;
+
+  // 2.request 읽어오기
+  Rio_readinitb(&rio, fd);           // 구조체 rio를 초기화하기
+  Rio_readlineb(&rio, buf, MAXLINE); // 구조체 rio의 buf에, fd로부터 읽어온 값을 저장
+  printf("Request headers:\n");
+  printf("%s", buf);
+  sscanf(buf, "%s %s %s", method, uri, version);
+
+  if (strcasecmp(method, "GET")) // GET 메서드가 아니면, "501 Not Implemented" 오류를 반환하고 종료
+  {
+    clienterror(fd, method, "501", "Not implemented", "Tiny does not implement this method");
+    return;
+  }
+
+  read_requesthdrs(&rio); // 요청 헤더를 읽기
+
+  // 3. URI를 파싱하여 filename과 CGI 인자(cgiargs) 설정, 그리고 정적/동적 컨텐츠 여부 결정
+  is_static = parse_uri(uri, filename, cgiargs);
+  // 4.클라이언트에게 정적 컨텐츠를 보내줘야 하는 경우
+  if (is_static)
+  {
+    // 파일이 정규 파일이 아니거나, 읽기 권한이 없으면 clienterror 호출해서, 클라이언트에게 보고
+    if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode))
+    {
+      clienterror(fd, filename, "403", "Forbidden", "Tiny couldn’t read the file");
+      return;
+    }
+    // 파일 실행가능...serve_static 호출
+    serve_static(fd, filename, sbuf.st_size);
+  }
+  // 5.클라이언트에게 동적 컨텐츠를 보내줘야 하는 경우
+  else
+  {
+    // 파일이 정규 파일이 아니거나, 읽기 권한이 없으면 clienterror 호출해서, 클라이언트에게 보고
+    if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode))
+    {
+      clienterror(fd, filename, "403", "Forbidden", "Tiny couldn’t run the CGI program");
+      return;
+    }
+    // 파일 실행가능...serve_dynamic 호출
+    serve_dynamic(fd, filename, cgiargs);
+  }
+}
