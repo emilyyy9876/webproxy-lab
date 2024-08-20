@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "csapp.h": "c",
+        "signal.h": "c",
+        "setjmp.h": "c"
+    }
+}
