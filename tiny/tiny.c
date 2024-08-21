@@ -103,3 +103,29 @@ void doit(int fd)
     serve_dynamic(fd, filename, cgiargs);
   }
 }
+
+void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg)
+{
+  char buf[MAXLINE], body[MAXBUF];
+
+  // HTTP 응답 body 만들기
+  sprintf(body, "<html><title>Tiny Error</title>");
+  sprintf(body, "%s<bodybgcolor="
+                "ffffff"
+                ">\r\n",
+          body);
+  sprintf(body, "%s%s:%s\r\n", body, errnum, shortmsg);
+  sprintf(body, "%s<p>%s:%s\r\n", body, longmsg, cause);
+  sprintf(body, "%s<hr><em>TheTinyWebserver</em>\r\n", body);
+
+  // HTTP 응답 출력하기
+  // sprintf, Rio_writen을 반복적으로 사용해서, 응답 메시지를 한 줄씩 구성하고, 이를 클라이언트에게 순차적으로 전송함
+  // 클라이언트는 이 데이터를 한 줄씩 수신하고 처리함
+  sprintf(buf, "HTTP/1.0 %s %s\r\n", errnum, shortmsg);
+  Rio_writen(fd, buf, strlen(buf));
+  sprintf(buf, "Content-type:text/html\r\n");
+  Rio_writen(fd, buf, strlen(buf));
+  sprintf(buf, "Content-length:%d\r\n\r\n", (int)strlen(body));
+  Rio_writen(fd, buf, strlen(buf));
+  Rio_writen(fd, body, strlen(body));
+}
