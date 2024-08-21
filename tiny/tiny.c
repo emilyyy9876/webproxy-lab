@@ -235,3 +235,31 @@ void get_filetype(char *filename, char *filetype)
   else
     strcpy(filetype, "text/plain");
 }
+
+void serve_dynamic(int fd, char *filename, char *cgiargs)
+{
+  // 1. 변수설정
+  char buf[MAXLINE], *emptylist[] = {NULL};
+
+  // 2. 상태 줄
+  sprintf(buf, "HTTP/1.0 200 OK\r\n");
+  Rio_writen(fd, buf, strlen(buf));
+  // 3. 응답 헤더
+  sprintf(buf, "Server: Tiny Web Server\r\n");
+  Rio_writen(fd, buf, strlen(buf));
+  // fork()??
+  // fork()를 호출하면 현재 프로세스의 정확한 복사본이 생성됨. 이 복사본이 자식 프로세스
+  // 자식 프로세스는 부모 프로세스와 거의 동일한 상태로 실행 함. 즉, fork()가 호출된 시점까지의 모든 메모리, 파일 디스크립터, 환경 변수 등이 복사됨
+  // 부모 프로세스와 자식프로세는 병렬적으로 수행되고, 뭐가 먼저 수행될 지 알 수 없음.
+
+  // 자식 프로세스만 수행하는 내용
+  if (Fork() == 0)
+  {
+
+    setenv("QUERY_STRING", cgiargs, 1);   // 환경변수 설정
+    Dup2(fd, STDOUT_FILENO);              // CGI 프로그램이 자신의 표준 출력으로 출력하는 모든 데이터를 클라이언트에게 전송
+    Execve(filename, emptylist, environ); // CGI프로그램 실행(인자,환경변수도 함께 전달)
+  }
+  // 부모는 자식 프로세스가 종료되길 기디렸다가, 수거함
+  Wait(NULL);
+}
