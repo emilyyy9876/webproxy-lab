@@ -141,3 +141,54 @@ void read_requesthdrs(rio_t *rp)
   }
   return;
 }
+
+// uri를 분석해서 정적콘텐츠인지, 동적콘텐츠인지 구분하고 그에 따라 filename(파일경로)과 cgiargs(cgi인자)를 설정하는 함수
+int parse_uri(char *uri, char *filename, char *cgiargs)
+{
+  char *ptr; // uri 내 특정 위치를 가리킬 포인터 변수를 선언
+
+  // 정적 컨텐츠인 경우
+  if (!strstr(uri, "cgi-bin")) // uri에 cgi-bin이 포함되어 있지 않은 경우
+  {
+    // 인자..없음
+    strcpy(cgiargs, "");
+    // 파일경로 지정하기
+    strcpy(filename, ".");
+    strcat(filename, uri); // string concatenate(string을 이어붙이는 함수).파일경로를 조합하는데 자주 사용됨--->여기서는 file 끝에 uri를 덧붙임
+    if (uri[strlen(uri) - 1] == '/')
+      strcat(filename, "home.html");
+    return 1; // 정적 컨텐츠임을 나타내는 1을 반환함
+  }
+
+  // 동적 컨텐츠인 경우
+  else
+  {
+    // 예시uri: "/cgi-bin/script.cgi?name=value"
+    ptr = index(uri, '?');
+    // ptr이 null이 아닌 경우--->인자 있는 경우
+    if (ptr)
+    {
+      // 포인터 연산....ptr이 가리키는 위치에서 한 칸 다음의 메모리 주소를 가리키도록 함
+
+      // strcpy는 두번째 인자인 ptr+1이 가리키는 문자열의 시작 주소부터 문자열의 끝('\0문자)까지 "모든 문자"를 첫 번째 인자인 cgiargs에 복사함
+      // 즉, ptr + 1은 'n'을 가리키며, 이 위치에서 시작하여 문자열의 끝까지(name=value\0)가 cgiargs에 복사함
+      strcpy(cgiargs, ptr + 1);
+
+      // '?'를 널 문자('\0')로 대체하여 "name=value"를 잘라냄
+
+      *ptr = '\0'; // "?" 위치에 널 문자를 넣어 문자열을 종료
+
+      // 예시: 변경 전 "/cgi-bin/script.cgi?name=value", 변경 후 "/cgi-bin/script.cgi\0name=value"
+      // URI는 "/cgi-bin/script.cgi"가 되고, cgiargs는 "name=value"가 됨
+    }
+
+    // ptr이 null인 경우--->인자 없는 경우
+    else
+      strcpy(cgiargs, ""); // cgiargs를 빈 문자열로 초기화
+
+    // 파일경로 지정하기
+    strcpy(filename, ".");
+    strcat(filename, uri);
+    return 0; // 정적 컨텐츠임을 나타내는 0을 반환함
+  }
+}
