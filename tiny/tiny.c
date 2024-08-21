@@ -175,7 +175,6 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
       strcpy(cgiargs, ptr + 1);
 
       // '?'를 널 문자('\0')로 대체하여 "name=value"를 잘라냄
-
       *ptr = '\0'; // "?" 위치에 널 문자를 넣어 문자열을 종료
 
       // 예시: 변경 전 "/cgi-bin/script.cgi?name=value", 변경 후 "/cgi-bin/script.cgi\0name=value"
@@ -191,4 +190,33 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
     strcat(filename, uri);
     return 0; // 정적 컨텐츠임을 나타내는 0을 반환함
   }
+}
+
+void serve_static(int fd, char *filename, int filesize)
+{
+  int srcfd;
+  char *srcp, filetype[MAXLINE], buf[MAXBUF];
+
+  // 응답 header를 client에게 보냄
+
+  get_filetype(filename, filetype);
+  // 문자열을 포맷팅하고, 그 결과를 버퍼 끝에 붙이는걸 반복하면서 응답 header 만듬
+  sprintf(buf, "HTTP/1.0 200 OK\r\n");
+  sprintf(buf, "%sServer: Tiny Web Server\r\n", buf);
+  sprintf(buf, "%sConnection: close\r\n", buf);
+  sprintf(buf, "%sContent-length: %d\r\n", buf, filesize);
+  sprintf(buf, "%sContent-type: %s\r\n\r\n", buf, filetype);
+  // fd를 통해 buf에 있는 데이터를 전송. buf에 있는 모든 데이터를 보내기 위해 strlen(buf)를 사용하여 길이만큼 전송함
+  Rio_writen(fd, buf, strlen(buf));
+  printf("Responseheaders:\n");
+  printf("%s", buf);
+
+  // 응답 body를 client에게 보냄
+
+  srcfd = Open(filename, O_RDONLY, 0); // filename에 해당하는 file을 읽기전용으로 열기, 반환된 값은 열린파일의 파일 디스크립터
+  srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0);
+  // srcfd로 열린 파일을 메모리에 매핑하기, 반환되는 값은 매핑된 메모리의 시작 주소
+  Close(srcfd);                   // 파일 내용을 메모리에 올렸으니, 파일 디스크립터 필요x--->닫기
+  Rio_writen(fd, srcp, filesize); // 클라이언트에게 "응답 body" 전송
+  Munmap(srcp, filesize);         // memory unmap ---> 매핑된 메모리를 해제하여 자원을 반환
 }
