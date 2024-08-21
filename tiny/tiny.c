@@ -63,10 +63,10 @@ void doit(int fd)
 
   // 2.request 읽어오기
   Rio_readinitb(&rio, fd);           // 구조체 rio를 초기화하기
-  Rio_readlineb(&rio, buf, MAXLINE); // 구조체 rio의 buf에, fd로부터 읽어온 값을 저장
+  Rio_readlineb(&rio, buf, MAXLINE); // 구조체 rio의 buf에, fd로부터한 줄의 데이터(요청라인)를 읽어옴
   printf("Request headers:\n");
   printf("%s", buf);
-  sscanf(buf, "%s %s %s", method, uri, version);
+  sscanf(buf, "%s %s %s", method, uri, version); // 요청 라인 분석, method/uri/version 추출하기
 
   if (strcasecmp(method, "GET")) // GET 메서드가 아니면, "501 Not Implemented" 오류를 반환하고 종료
   {
@@ -74,7 +74,7 @@ void doit(int fd)
     return;
   }
 
-  read_requesthdrs(&rio); // 요청 헤더를 읽기
+  read_requesthdrs(&rio); // 요청 헤더를 읽어오기
 
   // 3. URI를 파싱하여 filename과 CGI 인자(cgiargs) 설정, 그리고 정적/동적 컨텐츠 여부 결정
   is_static = parse_uri(uri, filename, cgiargs);
@@ -128,4 +128,16 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
   sprintf(buf, "Content-length:%d\r\n\r\n", (int)strlen(body));
   Rio_writen(fd, buf, strlen(buf));
   Rio_writen(fd, body, strlen(body));
+}
+
+void read_requesthdrs(rio_t *rp)
+{
+  char buf[MAXLINE];               // 헤더를 저장할 버퍼 선언
+  Rio_readlineb(rp, buf, MAXLINE); // 첫 번째 헤더 라인을 읽음
+  while (strcmp(buf, "\r\n"))      // strcmp=string compare함수로 두 string을 비교해서 같으면, 0을 반환함
+  {
+    Rio_readlineb(rp, buf, MAXLINE); // 다음 줄을 buf에 읽어들임
+    printf("%s", buf);
+  }
+  return;
 }
