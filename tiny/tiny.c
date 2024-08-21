@@ -220,3 +220,18 @@ void serve_static(int fd, char *filename, int filesize)
   Rio_writen(fd, srcp, filesize); // 클라이언트에게 "응답 body" 전송
   Munmap(srcp, filesize);         // memory unmap ---> 매핑된 메모리를 해제하여 자원을 반환
 }
+
+void get_filetype(char *filename, char *filetype)
+{
+  // 파일경로 이름에 맞게, filetype 설정하기
+  if (strstr(filename, ".html"))
+    strcpy(filetype, "text/html");
+  else if (strstr(filename, ".gif"))
+    strcpy(filetype, "image/gif");
+  else if (strstr(filename, ".png"))
+    strcpy(filetype, "image/png");
+  else if (strstr(filename, ".jpg"))
+    strcpy(filetype, "image/jpeg");
+  else
+    strcpy(filetype, "text/plain");
+}
