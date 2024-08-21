@@ -257,7 +257,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs)
   {
 
     setenv("QUERY_STRING", cgiargs, 1);   // 환경변수 설정
-    Dup2(fd, STDOUT_FILENO);              // CGI 프로그램이 자신의 표준 출력으로 출력하는 모든 데이터를 클라이언트에게 전송
+    Dup2(fd, STDOUT_FILENO);              // STDOUT_FILENO를 연결식별자로 재지정
     Execve(filename, emptylist, environ); // CGI프로그램 실행(인자,환경변수도 함께 전달)
   }
   // 부모는 자식 프로세스가 종료되길 기디렸다가, 수거함
